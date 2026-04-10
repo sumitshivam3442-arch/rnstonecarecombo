@@ -17,18 +17,17 @@ app.use(cors());
 app.use(body_parser.json());
 app.use(body_parser.urlencoded({ extended: true }));
 
-// Serve static files from current directory
-app.use(express.static('.'));
-
-// Root route - serve index.html
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Catch-all for HTML files
-app.get(/\.html$/, (req, res) => {
-  res.sendFile(path.join(__dirname, req.path));
-});
+// Serve static files from current directory FIRST - this is critical
+app.use(express.static('.', {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.css')) res.setHeader('Content-Type', 'text/css');
+    if (path.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg')) res.setHeader('Content-Type', 'image/jpeg');
+    if (path.endsWith('.png')) res.setHeader('Content-Type', 'image/png');
+    if (path.endsWith('.webp')) res.setHeader('Content-Type', 'image/webp');
+    if (path.endsWith('.mp4')) res.setHeader('Content-Type', 'video/mp4');
+  }
+}));
 
 // Email configuration using Gmail SMTP
 const transporter = nodemailer.createTransport({
@@ -345,6 +344,19 @@ app.use((err, req, res, next) => {
     message: 'Server error occurred',
     error: err.message
   });
+});
+
+// Catch-all route for SPA - serve HTML files for unmatched routes
+app.get('*', (req, res) => {
+  // If the request is for a path, serve index.html
+  if (req.path === '/') {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  } else if (req.path.endsWith('.html')) {
+    res.sendFile(path.join(__dirname, req.path));
+  } else {
+    // For any other route, serve index.html
+    res.sendFile(path.join(__dirname, 'index.html'));
+  }
 });
 
 // Start server
